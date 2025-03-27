@@ -1,0 +1,10 @@
+/backup
+/build
+/config.toml
+/dist
+/main.spec
+/mods
+/pack.bat
+/yumia_easy_mod_manager.spec
+/yumia_mod_insert_into_rdb.exe
+/__pycache__
