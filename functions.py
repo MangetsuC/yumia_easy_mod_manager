@@ -3,7 +3,6 @@
 import requests
 from requests.packages import urllib3
 import os
-import winreg
 import zipfile, py7zr
 from shutil import copy
 
