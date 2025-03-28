@@ -11,3 +11,4 @@
 /fdata_tool
 *.json
 *.toml
+*.log

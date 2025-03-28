@@ -1,7 +1,9 @@
-from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry, simpledialog
+from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry, simpledialog, Text
 import functions
 import fdata_functions
 import toml, os
+import threading
+import time
 
 class Yumia_mod_manager_gui(Tk):
     def __init__(self, screenName = None, baseName = None, className = "Tk", useTk = True, sync = False, use = None):
@@ -13,6 +15,10 @@ class Yumia_mod_manager_gui(Tk):
         self.yumia_root_path = None
 
         self.this_mod_name = None
+
+        #download tool state
+        self.is_download = False
+        self.is_download_finish = False
         
         
         self.row_interact = Frame(self)
@@ -29,8 +35,10 @@ class Yumia_mod_manager_gui(Tk):
         self.mods_list = StringVar()
 
         self.mods_listbox = Listbox(self.mods_column, listvariable=self.mods_list)
-        self.mods_label.pack(side="top", fill="x")
-        self.mods_listbox.pack(side="top", fill="x")
+        self.mods_label.pack(side="top", fill="x", expand=True)
+        self.mods_listbox.pack(side="top", fill="x", expand=True)
+
+        self.mods_listbox.bind("<ButtonRelease-1>", self.on_click_mod)
 
         #conflict
         self.conflict_mods_label = Label(self.conflict_mods_column, text="conflict_mods")
@@ -43,7 +51,7 @@ class Yumia_mod_manager_gui(Tk):
         #buttons
         self.btn_chose_game_path = Button(self.btn_column, text="Choose game path", command=self.set_yumia_game_path)
         self.btn_import_mod = Button(self.btn_column, text="Import mod file", command=self.import_mod)
-        self.btn_enable_or_disable = Button(self.btn_column, text="Waiting choose", command=self.enable_or_disable_mod)
+        self.btn_enable_or_disable = Button(self.btn_column, text="Waiting choose", command=self.enable_or_disable_mod, state="disabled")
         self.btn_mod_folder = Button(self.btn_column, text="Open mods folder", command=self.open_folder)
         self.btn_refresh_mods = Button(self.btn_column, text="Refresh mods list", command=self.manual_refresh_mods_list)
 
@@ -63,18 +71,44 @@ class Yumia_mod_manager_gui(Tk):
         self.btn_chose_game_path.pack(side="top", fill="x")
 
         #yumia_path
-        self.label_yumia_path = Label(self, text="game path not found")
+        self.label_log = Label(self, text="Log")
 
-        self.mods_column.pack(side="left", fill="y")
+        #stdout
+        self.text_stdout = Text(self, state="disabled", height=5)
+
+        #outer frame pack
+        self.mods_column.pack(side="left", fill="both", expand=True)
         self.conflict_mods_column.pack(side="left", fill="y")
         self.btn_column.pack(side="left", fill="y")
 
 
         self.row_interact.pack(side="top", fill="x")
-        self.label_yumia_path.pack(side="top", fill="x")
+        self.label_log.pack(side="top", fill="x")
+        self.text_stdout.pack(side="top", fill="both" ,expand=True)
 
-        self.mods_listbox.bind("<ButtonRelease-1>", self.on_click_mod)
+        self.after(1, self.after_gui_init)
+        self.after(10, self.yumia_mod_insert_into_rdb_tool_check)
 
+    def download_yumia_mod_insert_into_rdb_tool(self):
+        functions.download_yumia_mod_insert_into_rdb_tool()
+        self.is_download_finish = True
+
+    def yumia_mod_insert_into_rdb_tool_check(self):
+        if not self.is_download:
+            tmp_thread = threading.Thread(target=self.download_yumia_mod_insert_into_rdb_tool)
+            tmp_thread.start()
+            self.is_download = True
+        if not self.is_download_finish:
+            self.after(100, self.yumia_mod_insert_into_rdb_tool_check)
+        else:
+            self.btn_enable_or_disable.config(state="normal")
+        
+
+    def after_gui_init(self):
+        #self.title("Downloading necessary tool, please wait...")
+        #functions.download_yumia_mod_insert_into_rdb_tool()
+        #self.title("Yumia esay mod manager")
+        functions.mk_mods_folder()
 
         self.refresh_mods_list()
 
@@ -86,9 +120,11 @@ class Yumia_mod_manager_gui(Tk):
         functions.back_up_rdb_rdx(self.yumia_root_path)
         self.show_game_path()
 
+    def get_log_text(self) ->Text:
+        return self.text_stdout
+
     def show_game_path(self):
-        #self.label_yumia_path.config(text=f"game path: {self.yumia_root_path}") #too long to show
-        self.label_yumia_path.config(text=f"game path found")
+        print(f"Game path: {self.yumia_root_path}")
 
     def load_toml(self):
         if not os.path.exists("./config.toml"):

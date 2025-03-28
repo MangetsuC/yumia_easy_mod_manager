@@ -5,28 +5,47 @@ from requests.packages import urllib3
 import os
 import zipfile, py7zr
 from shutil import copy
+import hashlib
 
-if not os.path.exists("./yumia_mod_insert_into_rdb.exe"):
-    urllib3.disable_warnings()
-    url = 'https://github.com/eArmada8/yumia_fdata_tools/releases/download/v1.0.0/yumia_mod_insert_into_rdb.exe'
-    # 当把get函数的stream参数设置成False时，
-    # 它会立即开始下载文件并放到内存中，如果文件过大，有可能导致内存不足。
+def cal_file_md5(file_path):
+    md5_hash = hashlib.md5()
+    
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            md5_hash.update(chunk)
+    
+    return md5_hash.hexdigest()
 
-    # 当把get函数的stream参数设置成True时，它不会立即开始下载，
-    # 使用iter_content或iter_lines遍历内容或访问内容属性时才开始下载
-    print("Start download yumia_mod_insert_into_rdb.exe from eArmada8")
-    r = requests.get(url, stream=True, verify=False)
-    f = open("./yumia_mod_insert_into_rdb.exe", "wb")
-    for chunk in r.iter_content(chunk_size=1024):
-        if chunk:
-            f.write(chunk)
-            f.flush()
+def download_yumia_mod_insert_into_rdb_tool():
+    if os.path.exists("./yumia_mod_insert_into_rdb.exe"):
+        if cal_file_md5("./yumia_mod_insert_into_rdb.exe") == "61367ab01507a9acd7f8cbe8d4f27f30":
+            return
+    
+    while True:
+        urllib3.disable_warnings()
+        url = 'https://github.com/eArmada8/yumia_fdata_tools/releases/download/v1.0.0/yumia_mod_insert_into_rdb.exe'
 
-    f.close()
+        # 当把get函数的stream参数设置成True时，它不会立即开始下载，
+        # 使用iter_content或iter_lines遍历内容或访问内容属性时才开始下载
+        print("Start download yumia_mod_insert_into_rdb.exe from eArmada8. Please wait...")
+        r = requests.get(url, stream=True, verify=False)
+        f = open("./yumia_mod_insert_into_rdb.exe", "wb")
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+                f.flush()
 
+        f.close()
+        downloaded_file_md5 = cal_file_md5("./yumia_mod_insert_into_rdb.exe")
+        if downloaded_file_md5 == "61367ab01507a9acd7f8cbe8d4f27f30":
+            return
+        if os.path.exists("./yumia_mod_insert_into_rdb.exe"):
+            os.remove("./yumia_mod_insert_into_rdb.exe")
+        print(f"Downloaded yumia_mod_insert_into_rdb.exe md5 check error. It should be 61367ab01507a9acd7f8cbe8d4f27f30. But it is {downloaded_file_md5}.")
 
-if not os.path.exists("./mods"):
-    os.mkdir("./mods")
+def mk_mods_folder():
+    if not os.path.exists("./mods"):
+        os.mkdir("./mods")
 
 def cp_fdata(file_path, mod_name):
     if os.path.exists(file_path):
