@@ -73,6 +73,7 @@ class Yumia_mod_manager_gui(Tk):
             messagebox.showinfo("info", "Please choose the game file first")
             self.set_yumia_game_path()
 
+        functions.back_up_rdb_rdx(self.yumia_root_path)
         self.show_game_path()
 
     def show_game_path(self):
@@ -155,6 +156,7 @@ class Yumia_mod_manager_gui(Tk):
             self.config.update(dict(yumia_root_path = self.yumia_root_path))
             self.dump_toml()
             self.show_game_path()
+            functions.back_up_rdb_rdx(self.yumia_root_path)
 
     def open_folder(self):
         os.startfile(f"\"{os.getcwd()}/mods\"")
