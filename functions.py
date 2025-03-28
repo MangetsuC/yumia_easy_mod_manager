@@ -94,10 +94,17 @@ def back_up_rdb_rdx(yumia_path):
     if not os.path.exists("./backup"):
         os.mkdir("./backup")
 
-    if os.path.exists(f"{yumia_path}/Motor/root.rdb") and os.path.exists(f"{yumia_path}/Motor/root.rdx"):
-        if not os.path.exists("./backup/root.rdb"):
+    #use orginal file from yumia_mod_insert_into_rdb.exe first for yumia_mod_insert_into_rdb.exe user
+    if not os.path.exists("./backup/root.rdb"):
+        if os.path.exists(f"{yumia_path}/Motor/root.rdb.original"):
+            copy(f"{yumia_path}/Motor/root.rdb.original", "./backup/root.rdb")
+        elif os.path.exists(f"{yumia_path}/Motor/root.rdb"):
             copy(f"{yumia_path}/Motor/root.rdb", "./backup/root.rdb")
-        if not os.path.exists("./backup/root.rdx"):
+
+    if not os.path.exists("./backup/root.rdx"):
+        if os.path.exists(f"{yumia_path}/Motor/root.rdx.original"):
+            copy(f"{yumia_path}/Motor/root.rdx.original", "./backup/root.rdx")
+        elif os.path.exists(f"{yumia_path}/Motor/root.rdx"):
             copy(f"{yumia_path}/Motor/root.rdx", "./backup/root.rdx")
 
 def find_fdata(mod_name) -> str|None:
@@ -146,6 +153,12 @@ def restore_rdb_rdx(yumia_path):
     if os.path.exists("./backup/root.rdb") and os.path.exists("./backup/root.rdx"):
         copy("./backup/root.rdb", f"{yumia_path}/Motor/root.rdb")
         copy("./backup/root.rdx", f"{yumia_path}/Motor/root.rdx")
+    
+    #delete all yumiamod.json file
+    all_files = os.listdir(f"{yumia_path}/Motor")
+    for file in all_files:
+        if ".yumiamod.json" in file:
+            os.remove(f"{yumia_path}/Motor/{file}")
 
 def get_conflict_mods(target_mod_name) -> list[str]:
     conflict_mods_list = []
@@ -192,8 +205,8 @@ def disable_mod(yumia_path, target_mod_name):
             if target_mod_file != None:
                 break
 
-    if os.path.exists(f"{yumia_path}/Motor/{file}"):
-        os.remove(f"{yumia_path}/Motor/{file}")
+    if os.path.exists(f"{yumia_path}/Motor/{target_mod_file}"):
+        os.remove(f"{yumia_path}/Motor/{target_mod_file}")
 
     restore_rdb_rdx(yumia_path)
     json_list = []
