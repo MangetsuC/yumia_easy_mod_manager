@@ -8,3 +8,6 @@
 /yumia_easy_mod_manager.spec
 /yumia_mod_insert_into_rdb.exe
 /__pycache__
+/fdata_tool
+*.json
+*.toml

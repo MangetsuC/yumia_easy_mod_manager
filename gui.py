@@ -1,4 +1,4 @@
-from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox
+from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry
 import functions
 import toml, os
 
@@ -51,6 +51,14 @@ class Yumia_mod_manager_gui(Tk):
         self.btn_enable_or_disable.pack(side="top", fill="x")
         self.btn_mod_folder.pack(side="top", fill="x")
         self.btn_refresh_mods.pack(side="top", fill="x")
+
+        #entry
+        self.entry_hash = Entry(self.btn_column)
+        self.entry_hash.pack(side="top", fill="x")
+
+        #hash_btn
+        self.btn_chose_game_path = Button(self.btn_column, text="Reset hash")#, command=self.rest_fdata_hash)
+        self.btn_chose_game_path.pack(side="top", fill="x")
 
         #yumia_path
         self.label_yumia_path = Label(self, text="game path not found")
