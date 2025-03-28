@@ -1,5 +1,6 @@
-from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry
+from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry, simpledialog
 import functions
+import fdata_functions
 import toml, os
 
 class Yumia_mod_manager_gui(Tk):
@@ -55,9 +56,10 @@ class Yumia_mod_manager_gui(Tk):
         #entry
         self.entry_hash = Entry(self.btn_column)
         self.entry_hash.pack(side="top", fill="x")
+        self.entry_hash.insert(0, "fdata hex code")
 
         #hash_btn
-        self.btn_chose_game_path = Button(self.btn_column, text="Reset hash")#, command=self.rest_fdata_hash)
+        self.btn_chose_game_path = Button(self.btn_column, text="Reset hash", command=self.reset_fdata_hash)
         self.btn_chose_game_path.pack(side="top", fill="x")
 
         #yumia_path
@@ -121,6 +123,8 @@ class Yumia_mod_manager_gui(Tk):
 
         self.refresh_conflict_list(self.this_mod_name)
 
+        self.show_this_fdata_hex(self.this_mod_name)
+
         if functions.check_mod_state(self.this_mod_name):
             self.btn_enable_or_disable.config(text="Disable this mod")
         else:
@@ -128,9 +132,11 @@ class Yumia_mod_manager_gui(Tk):
 
     def enable_or_disable_mod(self):
         if self.this_mod_name == None:
+            messagebox.showerror("Error", "No mod selected.")
             print("No mod selected")
             return None
         if self.yumia_root_path == None:
+            messagebox.showerror("Error", "Cannot find yumia game path.")
             print("Cannot find yumia game path")
             return None
         
@@ -147,10 +153,30 @@ class Yumia_mod_manager_gui(Tk):
 
     def import_mod(self):
         mod_path = filedialog.askopenfilename(title="select mod archive file",
-                                           filetypes=[("mod archive file", "*.7z *.zip")])
+                                           filetypes=[("mod archive file", "*.7z *.zip"), ("mod fdata file", "*.fdata")])
         
+        is_full_mode = True
         if mod_path:
-            functions.load_mods_archive_file(mod_path)
+            if ".fdata" in mod_path:
+                mod_name = simpledialog.askstring("mod name", "enter your mod name here")
+                if mod_name != None:
+                    functions.cp_fdata(mod_path, mod_name)
+                    is_full_mode = False
+            else:
+                status = functions.load_mods_archive_file(mod_path)
+                if status != None:
+                    is_full_mode = status[0]
+                    mod_name = status[1]
+
+            if not is_full_mode:
+                fdata_path = functions.find_fdata(mod_name)
+                if fdata_path != None:
+                    hex_code = os.path.splitext(os.path.basename(fdata_path))[0]
+                    if len(hex_code) > 2:
+                        if hex_code[0:2] == "0x" or hex_code[0:2] == "0X":
+                            hex_code = hex_code[2:]
+                    fdata_functions.generate_yumiamod_json(hex_code, fdata_path, "./backup/root.rdb", f"./mods/{mod_name}")
+
             self.refresh_mods_list()
             self.refresh_conflict_list(self.this_mod_name)
 
@@ -171,6 +197,42 @@ class Yumia_mod_manager_gui(Tk):
 
     def manual_refresh_mods_list(self):
         self.refresh_mods_list()
+
+    def show_this_fdata_hex(self, mod_name):
+        fdata_path = functions.find_fdata(mod_name)
+        if fdata_path != None:
+            fdata_hex = (os.path.splitext(os.path.basename(fdata_path))[0])[2:]
+            self.entry_hash.delete(0, 'end')
+            self.entry_hash.insert(0, fdata_hex)
+        
+    def reset_fdata_hash(self):
+        if functions.check_mod_state(self.this_mod_name):
+            messagebox.showerror("Error", "Please disable this mod first.")
+            print("Please disable this mod first")
+            return 
+        target_hex_code = self.entry_hash.get()
+        if len(target_hex_code) == 8:
+            try:
+                int(str(target_hex_code), 16)
+            except ValueError:
+                messagebox.showerror("Error", "It not a valid hex code. Sample: 88888888")
+                print("Not a valid hex code")
+                return
+            fdata_path = functions.find_fdata(self.this_mod_name)
+            if fdata_path != None:
+                new_fdata_path = f"{os.path.dirname(fdata_path)}/0x{target_hex_code}.fdata"
+                os.rename(fdata_path, new_fdata_path)
+                yumiamod_json_path = functions.find_yumiamod_json(self.this_mod_name)
+                if yumiamod_json_path != None:
+                    os.remove(yumiamod_json_path)
+
+                fdata_functions.generate_yumiamod_json(target_hex_code, new_fdata_path, "./backup/root.rdb", f"./mods/{self.this_mod_name}")
+        
+        else:
+            messagebox.showerror("Error", "Error hex code len.")
+            print("Error hex code len")
+
+
 
 if __name__ == "__main__":
     pass

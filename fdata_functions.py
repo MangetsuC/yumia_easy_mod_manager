@@ -45,9 +45,10 @@ def find_all_file_metadata_in_fdata(fdata_file):
             this_offset = f.tell()
     return target_list
 
-def generate_yumiamod_json(target_hash, target_fdata, origin_rdb) -> bool:
+def generate_yumiamod_json(target_hash, target_fdata, origin_rdb, target_path) -> bool:
     target_hash = str(target_hash)
     if len(target_hash) != 8:
+        print(f"unkown fdata hash: {target_hash}")
         return False
     all_file_list = find_all_file_metadata_in_fdata(target_fdata)
     files_metadata = []
@@ -62,7 +63,7 @@ def generate_yumiamod_json(target_hash, target_fdata, origin_rdb) -> bool:
             'r_extradata': base64.b64encode(r_metadata).decode()}
         files_metadata.append(metadata)
     
-    with open(f'0x{target_hash}.yumiamod.json', 'wb') as f:
+    with open(f'{target_path}/0x{target_hash}.yumiamod.json', 'wb') as f:
         f.write(json.dumps(dict(fdata_hash = int(target_hash, 16), files = files_metadata), indent = 4).encode())
 
     return True

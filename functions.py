@@ -28,8 +28,15 @@ if not os.path.exists("./yumia_mod_insert_into_rdb.exe"):
 if not os.path.exists("./mods"):
     os.mkdir("./mods")
 
-def load_mods_archive_file(file_path):
+def cp_fdata(file_path, mod_name):
+    if os.path.exists(file_path):
+        if not os.path.exists(f"./mods/{mod_name}"):
+            os.mkdir(f"./mods/{mod_name}")
+        copy(file_path, f"./mods/{mod_name}/{os.path.basename(file_path)}")
+
+def load_mods_archive_file(file_path) -> list[bool|str]|None:
     mod_name = os.path.splitext(os.path.basename(file_path))[0]
+    is_full_mod = False
 
     if ".7z" in file_path:
         a_f = py7zr.SevenZipFile(file_path, mode='r')
@@ -43,10 +50,15 @@ def load_mods_archive_file(file_path):
             elif ".fdata" in each_file_name:
                 fdata_path = each_file_name
             
-        if yumiamod_json_path != None:
-            a_f.extract(path=f"./mods/{mod_name}", targets=[yumiamod_json_path, fdata_path])
+        if fdata_path != None:
+            if yumiamod_json_path != None:
+                a_f.extract(path=f"./mods/{mod_name}", targets=[yumiamod_json_path, fdata_path])
+                is_full_mod = True
+            else:
+                a_f.extract(path=f"./mods/{mod_name}", targets=[fdata_path])
 
         a_f.close()
+        return [is_full_mod, mod_name]
 
     elif ".zip" in file_path:
         a_f = zipfile.ZipFile(file_path)
@@ -60,10 +72,16 @@ def load_mods_archive_file(file_path):
             elif ".fdata" in each_file_name:
                 fdata_path = each_file_name
 
-        if yumiamod_json_path != None:
-            a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
+        if fdata_path != None:
             a_f.extract(fdata_path, f"./mods/{mod_name}")
+            if yumiamod_json_path != None:
+                a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
+                is_full_mod = True
+                
         a_f.close()
+        return [is_full_mod, mod_name]
+    
+    return None
 
 
 def call_yumia_mod_insert_into_rdb(yumia_path):
@@ -81,6 +99,24 @@ def back_up_rdb_rdx(yumia_path):
             copy(f"{yumia_path}/Motor/root.rdb", "./backup/root.rdb")
         if not os.path.exists("./backup/root.rdx"):
             copy(f"{yumia_path}/Motor/root.rdx", "./backup/root.rdx")
+
+def find_fdata(mod_name) -> str|None:
+    fdata_path = None
+    for root, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
+        for file in files:
+            if ".fdata" in file:
+                fdata_path = f"{root}/{file}"
+
+    return fdata_path
+
+def find_yumiamod_json(mod_name) -> str|None:
+    yumiamod_json_path = None
+    for root, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
+        for file in files:
+            if ".yumiamod.json" in file:
+                yumiamod_json_path = f"{root}/{file}"
+
+    return yumiamod_json_path
 
 def insert_mod_to_Motor(yumia_path, mod_path) -> str:
     yumiamod_json_path = None
