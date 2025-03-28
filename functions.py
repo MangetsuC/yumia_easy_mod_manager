@@ -185,9 +185,13 @@ def get_conflict_mods(target_mod_name) -> list[str]:
 
 def enable_mod(yumia_path, target_mod_name):
     restore_rdb_rdx(yumia_path)
+
+    enable_mods_list = get_enable_mods_list()
+    enable_mods_list.append(target_mod_name)
+
     json_list = []
-    json_list.append(insert_mod_to_Motor(yumia_path, f"./mods/{target_mod_name}"))
-    #insert_mod_to_Motor(yumia_path, f"./mods/{target_mod_name}")
+    for mod_name in enable_mods_list:
+        json_list.append(insert_mod_to_Motor(yumia_path, f"./mods/{mod_name}"))
 
     dump_rdb_rdx(yumia_path, json_list)
     f = open(f"./mods/{target_mod_name}/.enable", "w")
