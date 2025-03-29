@@ -1,18 +1,21 @@
 from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry, simpledialog, Text
+from tkinter.scrolledtext import ScrolledText
 import functions
 import fdata_functions
 import toml, os
 import threading
-import time
 
 class Yumia_mod_manager_gui(Tk):
     def __init__(self, screenName = None, baseName = None, className = "Tk", useTk = True, sync = False, use = None):
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
         self.title("Yumia esay mod manager")
+        if os.path.exists("./ico.ico"):
+            self.iconbitmap("./ico.ico")
 
         self.config = None
         self.yumia_root_path = None
+        self.is_ignore_md5_check = None
 
         self.this_mod_name = None
 
@@ -74,7 +77,7 @@ class Yumia_mod_manager_gui(Tk):
         self.label_log = Label(self, text="Log")
 
         #stdout
-        self.text_stdout = Text(self, state="disabled", height=5)
+        self.text_stdout = ScrolledText(self, state="disabled", height=5)
 
         #outer frame pack
         self.mods_column.pack(side="left", fill="both", expand=True)
@@ -86,11 +89,15 @@ class Yumia_mod_manager_gui(Tk):
         self.label_log.pack(side="top", fill="x")
         self.text_stdout.pack(side="top", fill="both" ,expand=True)
 
+        self.load_toml()
+
         self.after(1, self.after_gui_init)
         self.after(10, self.yumia_mod_insert_into_rdb_tool_check)
 
     def download_yumia_mod_insert_into_rdb_tool(self):
-        functions.download_yumia_mod_insert_into_rdb_tool()
+        while self.is_ignore_md5_check == None:
+            pass
+        functions.download_yumia_mod_insert_into_rdb_tool(self.is_ignore_md5_check)
         self.is_download_finish = True
 
     def yumia_mod_insert_into_rdb_tool_check(self):
@@ -105,14 +112,10 @@ class Yumia_mod_manager_gui(Tk):
         
 
     def after_gui_init(self):
-        #self.title("Downloading necessary tool, please wait...")
-        #functions.download_yumia_mod_insert_into_rdb_tool()
-        #self.title("Yumia esay mod manager")
         functions.mk_mods_folder()
 
         self.refresh_mods_list()
 
-        self.load_toml()
         if self.yumia_root_path == None:
             messagebox.showinfo("info", "Please choose the game file first")
             self.set_yumia_game_path()
@@ -135,6 +138,7 @@ class Yumia_mod_manager_gui(Tk):
             self.config = toml.load(f)
 
         self.yumia_root_path = self.config.get("yumia_root_path", None)
+        self.is_ignore_md5_check = self.config.get("ignore_md5_check", False)
 
     def dump_toml(self):
         with open("./config.toml", "w") as f:

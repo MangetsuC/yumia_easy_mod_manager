@@ -16,9 +16,9 @@ def cal_file_md5(file_path):
     
     return md5_hash.hexdigest()
 
-def download_yumia_mod_insert_into_rdb_tool():
+def download_yumia_mod_insert_into_rdb_tool(is_md5_check_ignore:bool):
     if os.path.exists("./yumia_mod_insert_into_rdb.exe"):
-        if cal_file_md5("./yumia_mod_insert_into_rdb.exe") == "61367ab01507a9acd7f8cbe8d4f27f30":
+        if (is_md5_check_ignore) or (cal_file_md5("./yumia_mod_insert_into_rdb.exe") == "61367ab01507a9acd7f8cbe8d4f27f30"):
             return
     
     while True:
@@ -27,6 +27,9 @@ def download_yumia_mod_insert_into_rdb_tool():
 
         # 当把get函数的stream参数设置成True时，它不会立即开始下载，
         # 使用iter_content或iter_lines遍历内容或访问内容属性时才开始下载
+        print("The necessary tool yumia_mod_insert_into_rdb.exe from eArmada8 will be downloaded in soon.")
+        print("If there is any error during the download. Just download the tool from https://github.com/eArmada8/yumia_fdata_tools/releases/download/v1.0.0/yumia_mod_insert_into_rdb.exe. Then close the mod manager and put it in the same directory of the Mod Manager.")
+        print("If there is a new version of yumia_mod_insert_into_rdb tool. Set ignore_md5_check = true in config.toml to ignore md5 check.")
         print("Start download yumia_mod_insert_into_rdb.exe from eArmada8. Please wait...")
         r = requests.get(url, stream=True, verify=False)
         f = open("./yumia_mod_insert_into_rdb.exe", "wb")
@@ -37,7 +40,8 @@ def download_yumia_mod_insert_into_rdb_tool():
 
         f.close()
         downloaded_file_md5 = cal_file_md5("./yumia_mod_insert_into_rdb.exe")
-        if downloaded_file_md5 == "61367ab01507a9acd7f8cbe8d4f27f30":
+        if (is_md5_check_ignore) or (downloaded_file_md5 == "61367ab01507a9acd7f8cbe8d4f27f30"):
+            print("Download finish.")
             return
         if os.path.exists("./yumia_mod_insert_into_rdb.exe"):
             os.remove("./yumia_mod_insert_into_rdb.exe")
