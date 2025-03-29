@@ -2,7 +2,7 @@ from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, me
 from tkinter.scrolledtext import ScrolledText
 import functions
 import fdata_functions
-import toml, os
+import toml, os, sys
 import threading
 
 class Yumia_mod_manager_gui(Tk):
@@ -10,8 +10,13 @@ class Yumia_mod_manager_gui(Tk):
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
         self.title("Yumia esay mod manager")
-        if os.path.exists("./ico.ico"):
-            self.iconbitmap("./ico.ico")
+        
+        if hasattr(sys, '_MEIPASS'):
+            if os.path.exists(f"{sys._MEIPASS}/assets/ico.ico"):
+                self.iconbitmap(f"{sys._MEIPASS}/assets/ico.ico")
+        else:
+            if os.path.exists("./ico.ico"):
+                self.iconbitmap("./ico.ico")
 
         self.config = None
         self.yumia_root_path = None
