@@ -1,11 +1,11 @@
-# 方法二：使用requests库
-# -*- coding:utf-8 -*-
 import requests
 from requests.packages import urllib3
 import os
 import zipfile, py7zr
 from shutil import copy
 import hashlib
+from subprocess import Popen as sub_Popen
+from subprocess import run as sub_run
 
 def cal_file_md5(file_path):
     md5_hash = hashlib.md5()
@@ -111,7 +111,7 @@ def call_yumia_mod_insert_into_rdb(yumia_path):
     if not os.path.exists(f"{yumia_path}/Motor/yumia_mod_insert_into_rdb.exe"):
         copy("./yumia_mod_insert_into_rdb.exe", f"{yumia_path}/Motor/yumia_mod_insert_into_rdb.exe")
     
-    os.system(f"\"{yumia_path}/Motor/yumia_mod_insert_into_rdb.exe\"")
+    sub_run(f"\"{yumia_path}/Motor/yumia_mod_insert_into_rdb.exe\"", shell=True)
 
 def back_up_rdb_rdx(yumia_path):
     if not os.path.exists("./backup"):
