@@ -191,6 +191,8 @@ class Yumia_mod_manager_gui(Tk):
         return ans_list
 
     def on_click_mod(self, event):
+        if len(self.mods_listbox.curselection()) == 0:
+            return 
         tmp_mods_list = self.convert_StringVar_to_list(self.mods_list)
         tmp_mod_name:str = tmp_mods_list[self.mods_listbox.curselection()[0]]
         tmp_real_modified_mod:str = tmp_mod_name
