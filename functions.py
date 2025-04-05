@@ -58,29 +58,27 @@ def cp_fdata(file_path, mod_name):
         copy(file_path, f"./mods/{mod_name}/{os.path.basename(file_path)}")
 
 def load_mods_archive_file(file_path) -> list[bool|str]|None:
-    mod_name = os.path.splitext(os.path.basename(file_path))[0]
+    mod_name:str = os.path.splitext(os.path.basename(file_path))[0]
     is_full_mod = False
 
     if ".7z" in file_path:
         a_f = py7zr.SevenZipFile(file_path, mode='r')
         
         content_list = a_f.namelist()
-        yumiamod_json_path = []
-        fdata_path = []
+        yumiamod_json_paths = []
+        fdata_paths = []
         for each_file_name in content_list:
             if ".yumiamod.json" in each_file_name:
-                yumiamod_json_path.append(each_file_name)
-                #yumiamod_json_path = each_file_name
+                yumiamod_json_paths.append(each_file_name)
             elif ".fdata" in each_file_name:
-                fdata_path.append(each_file_name)
-                #fdata_path = each_file_name
+                fdata_paths.append(each_file_name)
             
-        if fdata_path != []:
-            if yumiamod_json_path != []:
-                a_f.extract(path=f"./mods/{mod_name}", targets=(yumiamod_json_path + fdata_path))
+        if fdata_paths != []:
+            if yumiamod_json_paths != []:
+                a_f.extract(path=f"./mods/{mod_name}", targets=(yumiamod_json_paths + fdata_paths))
                 is_full_mod = True
             else:
-                a_f.extract(path=f"./mods/{mod_name}", targets=fdata_path)
+                a_f.extract(path=f"./mods/{mod_name}", targets=fdata_paths)
 
         a_f.close()
         return [is_full_mod, mod_name]
@@ -89,18 +87,20 @@ def load_mods_archive_file(file_path) -> list[bool|str]|None:
         a_f = zipfile.ZipFile(file_path)
         content_list = a_f.namelist()
 
-        yumiamod_json_path = None
-        fdata_path = None
+        yumiamod_json_paths = []
+        fdata_paths = []
         for each_file_name in content_list:
             if ".yumiamod.json" in each_file_name:
-                yumiamod_json_path = each_file_name
+                yumiamod_json_paths.append(each_file_name)
             elif ".fdata" in each_file_name:
-                fdata_path = each_file_name
+                fdata_paths.append(each_file_name)
 
-        if fdata_path != None:
-            a_f.extract(fdata_path, f"./mods/{mod_name}")
-            if yumiamod_json_path != None:
-                a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
+        if fdata_paths != []:
+            for fdata_path in fdata_paths:
+                a_f.extract(fdata_path, f"./mods/{mod_name}")
+            if yumiamod_json_paths != None:
+                for yumiamod_json_path in yumiamod_json_paths:
+                    a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
                 is_full_mod = True
                 
         a_f.close()
@@ -132,21 +132,40 @@ def back_up_rdb_rdx(yumia_path):
         elif os.path.exists(f"{yumia_path}/Motor/root.rdx"):
             copy(f"{yumia_path}/Motor/root.rdx", "./backup/root.rdx")
 
-def find_fdata(mod_name) -> str|None:
+def find_fdata(mod_name, specific_file = None) -> str|None:
     fdata_path = None
     for root, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
         for file in files:
-            if ".fdata" in file:
-                fdata_path = f"{root}/{file}"
+            if specific_file == None:
+                if ".fdata" in file:
+                    fdata_path = f"{root}/{file}"
+                    break
+            else:
+                if file == specific_file:
+                    fdata_path = f"{root}/{file}"
+                    break
+
+        if fdata_path != None:
+            break
 
     return fdata_path
 
-def find_yumiamod_json(mod_name) -> str|None:
+def find_yumiamod_json(mod_name, specific_file = None) -> str|None:
     yumiamod_json_path = None
     for root, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
         for file in files:
-            if ".yumiamod.json" in file:
-                yumiamod_json_path = f"{root}/{file}"
+            if specific_file == None:
+                if ".yumiamod.json" in file:
+                    yumiamod_json_path = f"{root}/{file}"
+                    break
+
+            else:
+                if file == specific_file:
+                    yumiamod_json_path = f"{root}/{file}"
+                    break
+
+        if yumiamod_json_path != None:
+            break
 
     return yumiamod_json_path
 
@@ -189,17 +208,23 @@ def restore_rdb_rdx(yumia_path):
         if ".yumiamod.json" in file:
             os.remove(f"{yumia_path}/Motor/{file}")
 
-def get_conflict_mods(target_mod_name) -> list[str]:
+def get_conflict_mods(target_mod_name, submod_name = None) -> list[str]:
     conflict_mods_list = []
 
-    fdata_name = None
-    for _, _, files in os.walk(f"./mods/{target_mod_name}", followlinks=False):
-        for file in files:
-            if ".fdata" in file:
-                fdata_name = f"{file}"
-                break
-            if fdata_name != None:
-                break
+    fdata_names = []
+
+    if submod_name == None:
+        #fdata_name = None
+        for _, _, files in os.walk(f"./mods/{target_mod_name}", followlinks=False):
+            for file in files:
+                if ".fdata" in file:
+                    fdata_names.append(file)
+                    #fdata_name = f"{file}"
+                    #break
+                #if fdata_name != None:
+                #    break
+    else:
+        fdata_names.append(f"{submod_name}.fdata")
 
     mods_name = os.listdir("./mods")
     for mod_name in mods_name:
@@ -207,7 +232,7 @@ def get_conflict_mods(target_mod_name) -> list[str]:
             continue
         for _, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
             for file in files:
-                if file == fdata_name:
+                if file in fdata_names:
                     conflict_mods_list.append(mod_name)
 
     return conflict_mods_list
@@ -263,6 +288,21 @@ def get_enable_mods_list() -> list[str]:
 
 def get_all_mods_list() -> list[str]:
     return os.listdir("./mods")
+
+def check_has_sub_mod(modname:str) -> list[bool|list[str]]:
+    if os.path.exists(f"./mods/{modname}"):
+        fdatas = []
+        for root, _, files in os.walk(f"./mods/{modname}", followlinks=False):
+            for file in files:
+                if ".fdata" in file:
+                    fdatas.append(f"{root}/{file}")
+
+        if len(fdatas) > 1:
+            return [True, fdatas]
+        else:
+            return [False, fdatas]
+
+    return [False, []]
 
 def check_mod_state(target_mod_name) -> bool:
     if os.path.exists(f"./mods/{target_mod_name}/.enable"):

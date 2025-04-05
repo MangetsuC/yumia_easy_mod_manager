@@ -23,6 +23,7 @@ class Yumia_mod_manager_gui(Tk):
         self.is_ignore_md5_check = None
 
         self.this_mod_name = None
+        self.submod_name = None #include prefix "0x"
 
         #download tool state
         self.is_download = False
@@ -42,7 +43,7 @@ class Yumia_mod_manager_gui(Tk):
         self.mod_list_ori = []
         self.mods_list = StringVar()
 
-        self.mods_listbox = Listbox(self.mods_column, listvariable=self.mods_list)
+        self.mods_listbox = Listbox(self.mods_column, listvariable=self.mods_list, exportselection=False) #exportselection=False disable the auto copy and enable multi selected
         self.mods_label.pack(side="top", fill="x", expand=True)
         self.mods_listbox.pack(side="top", fill="x", expand=True)
 
@@ -52,7 +53,7 @@ class Yumia_mod_manager_gui(Tk):
         self.conflict_mods_label = Label(self.conflict_mods_column, text="conflict_mods")
 
         self.conflict_list = StringVar()
-        self.conflict_mod_listbox = Listbox(self.conflict_mods_column, listvariable=self.conflict_list)
+        self.conflict_mod_listbox = Listbox(self.conflict_mods_column, listvariable=self.conflict_list, exportselection=False)
         self.conflict_mods_label.pack(side="top", fill="x")
         self.conflict_mod_listbox.pack(side="top", fill="x")
 
@@ -75,8 +76,8 @@ class Yumia_mod_manager_gui(Tk):
         self.entry_hash.insert(0, "fdata hex code")
 
         #hash_btn
-        self.btn_chose_game_path = Button(self.btn_column, text="Reset hash", command=self.reset_fdata_hash)
-        self.btn_chose_game_path.pack(side="top", fill="x")
+        self.btn_reset_fdata_hash = Button(self.btn_column, text="Reset hash", command=self.reset_fdata_hash)
+        self.btn_reset_fdata_hash.pack(side="top", fill="x")
 
         #yumia_path
         self.label_log = Label(self, text="Log")
@@ -157,18 +158,58 @@ class Yumia_mod_manager_gui(Tk):
                 tmp_list.append(f"{mod}[enabled]")
             else:
                 tmp_list.append(f"{mod}")
+
+            is_has_submods, submods = functions.check_has_sub_mod(mod)
+            if is_has_submods:
+                #add submods hex under the top mod
+                for submod in submods:
+                    tmp_list.append(f"  |{os.path.splitext(os.path.basename(submod))[0]}")
         self.mods_list.set(tmp_list)
+        
+    def hex_reset_refresh_mod_list(self):
+        tmp_sel_index = self.mods_listbox.curselection()
+        if len(tmp_sel_index) > 1:
+            tmp_sel_index = tmp_sel_index[0]
+        else:
+            tmp_sel_index = -1
+        self.refresh_mods_list()
+        if tmp_sel_index >= 0:
+            self.mods_listbox.select_set(tmp_sel_index)
 
-    def refresh_conflict_list(self, this_mod_name):
-        self.conflict_list.set(functions.get_conflict_mods(this_mod_name))
+    def refresh_conflict_list(self, this_mod_name, submod_name = None):
+        self.conflict_list.set(functions.get_conflict_mods(this_mod_name, submod_name))
 
+    def convert_StringVar_to_list(self, stringvar:StringVar) -> list[str]:
+        list_str = stringvar.get()[1:-1]
+        tmp_list = list_str.split(",") #应该定位单引号然后取出内容
+        ans_list = []
+        for each_str in tmp_list:
+            l_qm_index = each_str.find("'")
+            r_qm_index = each_str.rfind("'")
+            if l_qm_index >= 0  and r_qm_index >= 0 and l_qm_index < r_qm_index:
+                ans_list.append(each_str[l_qm_index+1:r_qm_index])
+        return ans_list
 
     def on_click_mod(self, event):
-        self.this_mod_name = self.mod_list_ori[self.mods_listbox.curselection()[0]]
+        tmp_mods_list = self.convert_StringVar_to_list(self.mods_list)
+        tmp_mod_name:str = tmp_mods_list[self.mods_listbox.curselection()[0]]
+        tmp_real_modified_mod:str = tmp_mod_name
+        self.submod_name = None
 
-        self.refresh_conflict_list(self.this_mod_name)
+        if "|" in tmp_mod_name:
+            #是临时列出的子模组
+            self.submod_name = tmp_mod_name.strip(" |")
+            for tmp_i in range(self.mods_listbox.curselection()[0],-1, -1):
+                if "|" not in tmp_mods_list[tmp_i]:
+                    tmp_real_modified_mod:str = tmp_mods_list[tmp_i]
+                    break
 
-        self.show_this_fdata_hex(self.this_mod_name)
+        self.this_mod_name = tmp_real_modified_mod.replace("[enabled]", "")
+
+
+        self.refresh_conflict_list(self.this_mod_name, self.submod_name)
+
+        self.show_this_fdata_hex(self.this_mod_name, self.submod_name)
 
         if functions.check_mod_state(self.this_mod_name):
             self.btn_enable_or_disable.config(text="Disable this mod")
@@ -205,6 +246,7 @@ class Yumia_mod_manager_gui(Tk):
             if ".fdata" in mod_path:
                 mod_name = simpledialog.askstring("mod name", "enter your mod name here")
                 if mod_name != None:
+                    mod_name = mod_name.strip(" ") #delete space
                     functions.cp_fdata(mod_path, mod_name)
                     is_full_mode = False
             else:
@@ -243,10 +285,21 @@ class Yumia_mod_manager_gui(Tk):
     def manual_refresh_mods_list(self):
         self.refresh_mods_list()
 
-    def show_this_fdata_hex(self, mod_name):
-        fdata_path = functions.find_fdata(mod_name)
-        if fdata_path != None:
-            fdata_hex = (os.path.splitext(os.path.basename(fdata_path))[0])[2:]
+    def show_this_fdata_hex(self, mod_name, submod_name = None):
+        self.btn_reset_fdata_hash.config(state="normal")
+        fdata_hex = None
+        if submod_name == None:
+            is_multi_fdata_mod = functions.check_has_sub_mod(mod_name)[0]
+            if is_multi_fdata_mod:
+                fdata_hex = "multi-fdata"
+                self.btn_reset_fdata_hash.config(state="disabled")
+            else:
+                fdata_path = functions.find_fdata(mod_name)
+                if fdata_path != None:
+                    fdata_hex = (os.path.splitext(os.path.basename(fdata_path))[0])[2:]
+        else:
+            fdata_hex = submod_name[2:]
+        if fdata_hex != None:
             self.entry_hash.delete(0, 'end')
             self.entry_hash.insert(0, fdata_hex)
         
@@ -263,15 +316,24 @@ class Yumia_mod_manager_gui(Tk):
                 messagebox.showerror("Error", "It not a valid hex code. Sample: 88888888")
                 print("Not a valid hex code")
                 return
-            fdata_path = functions.find_fdata(self.this_mod_name)
+            #check submod first
+            tmp_submod_file_name = f"{self.submod_name}.fdata" if self.submod_name != None else None
+            tmp_submod_file_yumiamodjson_name = f"{self.submod_name}.yumiamod.json" if self.submod_name != None else None
+            fdata_path = functions.find_fdata(self.this_mod_name, tmp_submod_file_name)
             if fdata_path != None:
                 new_fdata_path = f"{os.path.dirname(fdata_path)}/0x{target_hex_code}.fdata"
                 os.rename(fdata_path, new_fdata_path)
-                yumiamod_json_path = functions.find_yumiamod_json(self.this_mod_name)
+
+                yumiamod_json_path = functions.find_yumiamod_json(self.this_mod_name, tmp_submod_file_yumiamodjson_name)
                 if yumiamod_json_path != None:
                     os.remove(yumiamod_json_path)
 
                 fdata_functions.generate_yumiamod_json(target_hex_code, new_fdata_path, "./backup/root.rdb", f"./mods/{self.this_mod_name}")
+
+                #self.hex_reset_refresh_mod_list()
+                self.refresh_mods_list()
+                self.this_mod_name = None
+                self.submod_name = None
         
         else:
             messagebox.showerror("Error", "Error hex code len.")
