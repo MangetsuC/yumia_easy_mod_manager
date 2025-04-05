@@ -65,20 +65,22 @@ def load_mods_archive_file(file_path) -> list[bool|str]|None:
         a_f = py7zr.SevenZipFile(file_path, mode='r')
         
         content_list = a_f.namelist()
-        yumiamod_json_path = None
-        fdata_path = None
+        yumiamod_json_path = []
+        fdata_path = []
         for each_file_name in content_list:
             if ".yumiamod.json" in each_file_name:
-                yumiamod_json_path = each_file_name
+                yumiamod_json_path.append(each_file_name)
+                #yumiamod_json_path = each_file_name
             elif ".fdata" in each_file_name:
-                fdata_path = each_file_name
+                fdata_path.append(each_file_name)
+                #fdata_path = each_file_name
             
-        if fdata_path != None:
-            if yumiamod_json_path != None:
-                a_f.extract(path=f"./mods/{mod_name}", targets=[yumiamod_json_path, fdata_path])
+        if fdata_path != []:
+            if yumiamod_json_path != []:
+                a_f.extract(path=f"./mods/{mod_name}", targets=(yumiamod_json_path + fdata_path))
                 is_full_mod = True
             else:
-                a_f.extract(path=f"./mods/{mod_name}", targets=[fdata_path])
+                a_f.extract(path=f"./mods/{mod_name}", targets=fdata_path)
 
         a_f.close()
         return [is_full_mod, mod_name]
@@ -148,23 +150,27 @@ def find_yumiamod_json(mod_name) -> str|None:
 
     return yumiamod_json_path
 
-def insert_mod_to_Motor(yumia_path, mod_path) -> str:
-    yumiamod_json_path = None
-    fdata_path = None
+def insert_mod_to_Motor(yumia_path, mod_path) -> list[str]:
+    yumiamod_json_paths = []
+    fdata_paths = []
     for root, _, files in os.walk(mod_path, followlinks=False):
         for file in files:
             if ".yumiamod.json" in file:
-                yumiamod_json_path = f"{root}/{file}"
+                yumiamod_json_paths.append(f"{root}/{file}")
             elif ".fdata" in file:
-                fdata_path = f"{root}/{file}"
+                fdata_paths.append(f"{root}/{file}")
 
-    if yumiamod_json_path != None and fdata_path != None:
-        copy(yumiamod_json_path, f"{yumia_path}/Motor/{os.path.basename(yumiamod_json_path)}")
-        copy(fdata_path, f"{yumia_path}/Motor/{os.path.basename(fdata_path)}")
+    if yumiamod_json_paths != [] and fdata_paths != []:
+        for yumiamod_json_path in yumiamod_json_paths:
+            copy(yumiamod_json_path, f"{yumia_path}/Motor/{os.path.basename(yumiamod_json_path)}")
+        for fdata_path in fdata_paths:
+            copy(fdata_path, f"{yumia_path}/Motor/{os.path.basename(fdata_path)}")
     else:
-        print(f"mod file error\nfdata: {fdata_path}\njson:{yumiamod_json_path}")
+        fdata_state = ' '.join(fdata_paths) if fdata_paths != [] else "Unfound"
+        yumiamod_json_state = ' '.join(yumiamod_json_paths) if yumiamod_json_paths != [] else "Unfound"
+        print(f"mod file error\nfdata: {fdata_state}\njson: {yumiamod_json_state}")
             
-    return os.path.basename(yumiamod_json_path)
+    return [os.path.basename(x) for x in yumiamod_json_paths]#os.path.basename(yumiamod_json_path)
 
 def dump_rdb_rdx(yumia_path, json_list):
     call_yumia_mod_insert_into_rdb(yumia_path)
@@ -214,7 +220,7 @@ def enable_mod(yumia_path, target_mod_name):
 
     json_list = []
     for mod_name in enable_mods_list:
-        json_list.append(insert_mod_to_Motor(yumia_path, f"./mods/{mod_name}"))
+        json_list.extend(insert_mod_to_Motor(yumia_path, f"./mods/{mod_name}"))
 
     dump_rdb_rdx(yumia_path, json_list)
     f = open(f"./mods/{target_mod_name}/.enable", "w")
@@ -223,24 +229,22 @@ def enable_mod(yumia_path, target_mod_name):
 def disable_mod(yumia_path, target_mod_name):
     enable_mods_list = get_enable_mods_list()
 
-    target_mod_file = None
+    target_mod_files = []
     for _, _, files in os.walk(f"./mods/{target_mod_name}", followlinks=False):
         for file in files:
             if ".fdata" in file:
-                target_mod_file = file
-                break
-            if target_mod_file != None:
-                break
+                target_mod_files.append(file)
 
-    if os.path.exists(f"{yumia_path}/Motor/{target_mod_file}"):
-        os.remove(f"{yumia_path}/Motor/{target_mod_file}")
+    for target_mod_file in target_mod_files:
+        if os.path.exists(f"{yumia_path}/Motor/{target_mod_file}"):
+            os.remove(f"{yumia_path}/Motor/{target_mod_file}")
 
     restore_rdb_rdx(yumia_path)
     json_list = []
     for mod in enable_mods_list:
         if mod == target_mod_name:
             continue
-        json_list.append(insert_mod_to_Motor(yumia_path, f"./mods/{mod}"))
+        json_list.extend(insert_mod_to_Motor(yumia_path, f"./mods/{mod}"))
     
     dump_rdb_rdx(yumia_path, json_list)
 
