@@ -132,20 +132,19 @@ def back_up_rdb_rdx(yumia_path):
         elif os.path.exists(f"{yumia_path}/Motor/root.rdx"):
             copy(f"{yumia_path}/Motor/root.rdx", "./backup/root.rdx")
 
-def find_fdata(mod_name, specific_file = None) -> str|None:
-    fdata_path = None
+def find_fdatas(mod_name, specific_file = None) -> list[str]:
+    fdata_path = []
     for root, _, files in os.walk(f"./mods/{mod_name}", followlinks=False):
         for file in files:
             if specific_file == None:
                 if ".fdata" in file:
-                    fdata_path = f"{root}/{file}"
-                    break
+                    fdata_path.append(f"{root}/{file}")
             else:
                 if file == specific_file:
-                    fdata_path = f"{root}/{file}"
+                    fdata_path.append(f"{root}/{file}")
                     break
 
-        if fdata_path != None:
+        if fdata_path != [] and specific_file != None:
             break
 
     return fdata_path

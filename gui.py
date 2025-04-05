@@ -256,15 +256,17 @@ class Yumia_mod_manager_gui(Tk):
                     mod_name = status[1]
 
             if not is_full_mode:
-                fdata_path = functions.find_fdata(mod_name)
-                if fdata_path != None:
-                    hex_code = os.path.splitext(os.path.basename(fdata_path))[0]
-                    if len(hex_code) > 2:
-                        if hex_code[0:2] == "0x" or hex_code[0:2] == "0X":
-                            hex_code = hex_code[2:]
-                    fdata_functions.generate_yumiamod_json(hex_code, fdata_path, "./backup/root.rdb", f"./mods/{mod_name}")
+                fdata_paths = functions.find_fdatas(mod_name)
+                if fdata_paths != []:
+                    for fdata_path in fdata_paths:
+                        hex_code = os.path.splitext(os.path.basename(fdata_path))[0]
+                        if len(hex_code) > 2:
+                            if hex_code[0:2] == "0x" or hex_code[0:2] == "0X":
+                                hex_code = hex_code[2:]
+                        fdata_functions.generate_yumiamod_json(hex_code, fdata_path, "./backup/root.rdb", f"./mods/{mod_name}")
 
             self.refresh_mods_list()
+            self.on_click_mod(None)
             self.refresh_conflict_list(self.this_mod_name)
 
     def set_yumia_game_path(self):
@@ -294,9 +296,9 @@ class Yumia_mod_manager_gui(Tk):
                 fdata_hex = "multi-fdata"
                 self.btn_reset_fdata_hash.config(state="disabled")
             else:
-                fdata_path = functions.find_fdata(mod_name)
-                if fdata_path != None:
-                    fdata_hex = (os.path.splitext(os.path.basename(fdata_path))[0])[2:]
+                fdata_paths = functions.find_fdatas(mod_name)
+                if fdata_paths != []:
+                    fdata_hex = (os.path.splitext(os.path.basename(fdata_paths[0]))[0])[2:]
         else:
             fdata_hex = submod_name[2:]
         if fdata_hex != None:
@@ -319,10 +321,10 @@ class Yumia_mod_manager_gui(Tk):
             #check submod first
             tmp_submod_file_name = f"{self.submod_name}.fdata" if self.submod_name != None else None
             tmp_submod_file_yumiamodjson_name = f"{self.submod_name}.yumiamod.json" if self.submod_name != None else None
-            fdata_path = functions.find_fdata(self.this_mod_name, tmp_submod_file_name)
-            if fdata_path != None:
-                new_fdata_path = f"{os.path.dirname(fdata_path)}/0x{target_hex_code}.fdata"
-                os.rename(fdata_path, new_fdata_path)
+            fdata_paths = functions.find_fdatas(self.this_mod_name, tmp_submod_file_name)
+            if fdata_paths != []:
+                new_fdata_path = f"{os.path.dirname(fdata_paths[0])}/0x{target_hex_code}.fdata"
+                os.rename(fdata_paths[0], new_fdata_path)
 
                 yumiamod_json_path = functions.find_yumiamod_json(self.this_mod_name, tmp_submod_file_yumiamodjson_name)
                 if yumiamod_json_path != None:
@@ -332,8 +334,7 @@ class Yumia_mod_manager_gui(Tk):
 
                 #self.hex_reset_refresh_mod_list()
                 self.refresh_mods_list()
-                self.this_mod_name = None
-                self.submod_name = None
+                self.on_click_mod(None)
         
         else:
             messagebox.showerror("Error", "Error hex code len.")
