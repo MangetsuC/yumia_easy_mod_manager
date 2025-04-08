@@ -9,7 +9,7 @@ class Yumia_mod_manager_gui(Tk):
     def __init__(self, screenName = None, baseName = None, className = "Tk", useTk = True, sync = False, use = None):
         super().__init__(screenName, baseName, className, useTk, sync, use)
 
-        self.title("Yumia esay mod manager")
+        self.title("Yumia easy mod manager")
         
         if hasattr(sys, '_MEIPASS'):
             if os.path.exists(f"{sys._MEIPASS}/assets/ico.ico"):
