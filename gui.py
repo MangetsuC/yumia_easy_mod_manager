@@ -258,29 +258,31 @@ class Yumia_mod_manager_gui(Tk):
         mod_path = filedialog.askopenfilename(title="select mod archive file",
                                            filetypes=[("mod file", "*.7z *.zip *.fdata")])
         
-        is_full_mode = True
+        # is_full_mode = True
+        mod_status = []
         if mod_path:
             if ".fdata" in mod_path:
                 mod_name = simpledialog.askstring("mod name", "enter your mod name here")
                 if mod_name != None:
                     mod_name = mod_name.strip(" ") #delete space
                     functions.cp_fdata(mod_path, mod_name)
-                    is_full_mode = False
+                    mod_status = [[False, mod_name]]
             else:
-                status = functions.load_mods_archive_file(mod_path)
-                if status != None:
-                    is_full_mode = status[0]
-                    mod_name = status[1]
+                mod_status = functions.load_mods_archive_file(mod_path)
 
-            if not is_full_mode:
-                fdata_paths = functions.find_fdatas(mod_name)
-                if fdata_paths != []:
-                    for fdata_path in fdata_paths:
-                        hex_code = os.path.splitext(os.path.basename(fdata_path))[0]
-                        if len(hex_code) > 2:
-                            if hex_code[0:2] == "0x" or hex_code[0:2] == "0X":
-                                hex_code = hex_code[2:]
-                        fdata_functions.generate_yumiamod_json(hex_code, fdata_path, "./backup/root.rdb", f"./mods/{mod_name}")
+            self.update()
+            for each_status in mod_status:
+                is_full_mode = each_status[0]
+                mod_name = each_status[1]
+                if not is_full_mode:
+                    fdata_paths = functions.find_fdatas(mod_name)
+                    if fdata_paths != []:
+                        for fdata_path in fdata_paths:
+                            hex_code = os.path.splitext(os.path.basename(fdata_path))[0]
+                            if len(hex_code) > 2:
+                                if hex_code[0:2] == "0x" or hex_code[0:2] == "0X":
+                                    hex_code = hex_code[2:]
+                            fdata_functions.generate_yumiamod_json(hex_code, fdata_path, "./backup/root.rdb", f"./mods/{mod_name}")
 
             self.refresh_mods_list()
             self.on_click_mod(None)

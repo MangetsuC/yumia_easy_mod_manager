@@ -6,7 +6,7 @@ from shutil import copy
 import hashlib
 from subprocess import Popen as sub_Popen
 from subprocess import run as sub_run
-import time
+import time, pathlib
 
 def cal_file_md5(file_path):
     md5_hash = hashlib.md5()
@@ -61,6 +61,7 @@ def cp_fdata(file_path, mod_name):
 def load_mods_archive_file(file_path) -> list[bool|str]|None:
     mod_name:str = os.path.splitext(os.path.basename(file_path))[0]
     is_full_mod = False
+    mod_status = []
 
     if ".7z" in file_path:
         a_f = py7zr.SevenZipFile(file_path, mode='r')
@@ -73,16 +74,57 @@ def load_mods_archive_file(file_path) -> list[bool|str]|None:
                 yumiamod_json_paths.append(each_file_name)
             elif ".fdata" in each_file_name:
                 fdata_paths.append(each_file_name)
-            
-        if fdata_paths != []:
-            if yumiamod_json_paths != []:
-                a_f.extract(path=f"./mods/{mod_name}", targets=(yumiamod_json_paths + fdata_paths))
-                is_full_mod = True
-            else:
-                a_f.extract(path=f"./mods/{mod_name}", targets=fdata_paths)
+
+        fdata_basenames = [os.path.basename(x) for x in fdata_paths]
+        if len(set(fdata_basenames)) == len(fdata_basenames):
+            #无替换文件
+            if fdata_paths != []:
+                if yumiamod_json_paths != []:
+                    a_f.extract(path=f"./mods/{mod_name}", targets=(yumiamod_json_paths + fdata_paths))
+                    mod_status.append([True, mod_name])
+                else:
+                    a_f.extract(path=f"./mods/{mod_name}", targets=fdata_paths)
+                    mod_status.append([False, mod_name])            
+        else:
+            #有替换文件
+            if fdata_paths != []:
+                print("It will cost some time to load these fdata files. Please wait for a while.")
+                fdata_groups: list[list[str]] = []
+                while len(fdata_paths) > 0:
+                    this_fdata = fdata_paths.pop()
+                    this_fdata_dirname = os.path.dirname(this_fdata)
+                    for group_index in range(len(fdata_groups)):
+                        if this_fdata_dirname == os.path.dirname(fdata_groups[group_index][0]):
+                            fdata_groups[group_index].append(this_fdata)
+                            break
+                    else:
+                        fdata_groups.append([this_fdata])
+
+                for group_index in range(len(fdata_groups)):
+                    path_list = list(pathlib.Path(fdata_groups[group_index][0]).parts)
+                    additional_mod_name = str(group_index)
+                    if len(path_list) >= 2:
+                        for i in range(-len(path_list), -1):
+                            is_all_different = True
+                            for tmp_index in range(len(fdata_groups)):
+                                if tmp_index == group_index:
+                                    continue
+                                tmp_path_list = list(pathlib.Path(fdata_groups[tmp_index][0]).parts)
+                                if tmp_path_list[i] == path_list[i]:
+                                    is_all_different = False
+                                    break
+                            if is_all_different:
+                                break
+
+                        if is_all_different:
+                            additional_mod_name = path_list[i]
+
+                    a_f.reset()
+                    a_f.extract(path=f"./mods/{mod_name}_{additional_mod_name}", targets=fdata_groups[group_index])
+                    mod_status.append([False, f"{mod_name}_{additional_mod_name}"])
 
         a_f.close()
-        return [is_full_mod, mod_name]
+        return mod_status
 
     elif ".zip" in file_path:
         a_f = zipfile.ZipFile(file_path)
@@ -96,16 +138,58 @@ def load_mods_archive_file(file_path) -> list[bool|str]|None:
             elif ".fdata" in each_file_name:
                 fdata_paths.append(each_file_name)
 
-        if fdata_paths != []:
-            for fdata_path in fdata_paths:
-                a_f.extract(fdata_path, f"./mods/{mod_name}")
-            if yumiamod_json_paths != None:
-                for yumiamod_json_path in yumiamod_json_paths:
-                    a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
-                is_full_mod = True
-                
+        fdata_basenames = [os.path.basename(x) for x in fdata_paths]
+
+        if len(set(fdata_basenames)) == len(fdata_basenames):
+            if fdata_paths != []:
+                for fdata_path in fdata_paths:
+                    a_f.extract(fdata_path, f"./mods/{mod_name}")
+                if yumiamod_json_paths != None:
+                    for yumiamod_json_path in yumiamod_json_paths:
+                        a_f.extract(yumiamod_json_path, f"./mods/{mod_name}")
+                    mod_status.append([True, mod_name])
+                else:
+                    mod_status.append([False, mod_name])
+        else:
+            #有替换文件
+            if fdata_paths != []:
+                print("It will cost some time to load these fdata files. Please wait for a while.")
+                fdata_groups: list[list[str]] = []
+                while len(fdata_paths) > 0:
+                    this_fdata = fdata_paths.pop()
+                    this_fdata_dirname = os.path.dirname(this_fdata)
+                    for group_index in range(len(fdata_groups)):
+                        if this_fdata_dirname == os.path.dirname(fdata_groups[group_index][0]):
+                            fdata_groups[group_index].append(this_fdata)
+                            break
+                    else:
+                        fdata_groups.append([this_fdata])
+
+                for group_index in range(len(fdata_groups)):
+                    path_list = list(pathlib.Path(fdata_groups[group_index][0]).parts)
+                    additional_mod_name = str(group_index)
+                    if len(path_list) >= 2:
+                        for i in range(-len(path_list), -1):
+                            is_all_different = True
+                            for tmp_index in range(len(fdata_groups)):
+                                if tmp_index == group_index:
+                                    continue
+                                tmp_path_list = list(pathlib.Path(fdata_groups[tmp_index][0]).parts)
+                                if tmp_path_list[i] == path_list[i]:
+                                    is_all_different = False
+                                    break
+                            if is_all_different:
+                                break
+
+                        if is_all_different:
+                            additional_mod_name = path_list[i]
+
+                    for fdata_file in fdata_groups[group_index]:
+                        a_f.extract(fdata_file, f"./mods/{mod_name}_{additional_mod_name}")
+                    mod_status.append([False, f"{mod_name}_{additional_mod_name}"])
+                    
         a_f.close()
-        return [is_full_mod, mod_name]
+        return mod_status
     
     return None
 
