@@ -256,7 +256,7 @@ class Yumia_mod_manager_gui(Tk):
 
     def import_mod(self):
         mod_path = filedialog.askopenfilename(title="select mod archive file",
-                                           filetypes=[("mod archive file", "*.7z *.zip"), ("mod fdata file", "*.fdata")])
+                                           filetypes=[("mod file", "*.7z *.zip *.fdata")])
         
         is_full_mode = True
         if mod_path:
