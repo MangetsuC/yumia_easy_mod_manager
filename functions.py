@@ -2,7 +2,7 @@ import requests
 from requests.packages import urllib3
 import os
 import zipfile, py7zr
-from shutil import copy
+from shutil import copy, rmtree
 import hashlib
 from subprocess import Popen as sub_Popen
 from subprocess import run as sub_run
@@ -60,7 +60,6 @@ def cp_fdata(file_path, mod_name):
 
 def load_mods_archive_file(file_path) -> list[bool|str]|None:
     mod_name:str = os.path.splitext(os.path.basename(file_path))[0]
-    is_full_mod = False
     mod_status = []
 
     if ".7z" in file_path:
@@ -309,15 +308,10 @@ def get_conflict_mods(target_mod_name, submod_name = None) -> list[str]:
     fdata_names = []
 
     if submod_name == None:
-        #fdata_name = None
         for _, _, files in os.walk(f"./mods/{target_mod_name}", followlinks=False):
             for file in files:
                 if ".fdata" in file:
                     fdata_names.append(file)
-                    #fdata_name = f"{file}"
-                    #break
-                #if fdata_name != None:
-                #    break
     else:
         fdata_names.append(f"{submod_name}.fdata")
 
@@ -405,7 +399,17 @@ def check_mod_state(target_mod_name) -> bool:
     if os.path.exists(f"./mods/{target_mod_name}/.enable"):
         return True
     return False
-    
+
+def split_mods(modname:str):
+    mod_status = check_has_sub_mod(modname)
+    if mod_status[0]:
+        sub_fdatas = mod_status[1]
+        for i in range(len(sub_fdatas)):
+            fdata_path = sub_fdatas[i]
+            json_path = find_yumiamod_json(modname, f"{os.path.basename(fdata_path).split('.')[0]}.yumiamod.json")
+            os.makedirs(f"./mods/{modname}_{i}")
+            copy(fdata_path, f"./mods/{modname}_{i}/{os.path.basename(fdata_path)}")
+            copy(json_path, f"./mods/{modname}_{i}/{os.path.basename(json_path)}")
 
 if __name__ == "__main__":
     pass

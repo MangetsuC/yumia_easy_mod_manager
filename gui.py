@@ -1,5 +1,9 @@
 from tkinter import Tk, Listbox, StringVar, Frame, Label, Button, filedialog, messagebox, Entry, simpledialog, Text
 from tkinter.scrolledtext import ScrolledText
+from tkinter import W as tk_grid_W
+from tkinter import E as tk_grid_E
+from tkinter import S as tk_grid_S
+from tkinter import N as tk_grid_N
 import functions
 import fdata_functions
 import toml, os, sys
@@ -40,14 +44,13 @@ class Yumia_mod_manager_gui(Tk):
 
         #mods
         self.mods_label = Label(self.mods_column, text="mods")
-        #self.mods_label.config(text="test")
 
         self.mod_list_ori = []
         self.mods_list = StringVar()
 
         self.mods_listbox = Listbox(self.mods_column, listvariable=self.mods_list, exportselection=False) #exportselection=False disable the auto copy and enable multi selected
-        self.mods_label.pack(side="top", fill="x", expand=True)
-        self.mods_listbox.pack(side="top", fill="x", expand=True)
+        self.mods_label.pack(side="top", fill="x")
+        self.mods_listbox.pack(side="top", fill="both", expand=True)
 
         self.mods_listbox.bind("<ButtonRelease-1>", self.on_click_mod)
 
@@ -57,7 +60,7 @@ class Yumia_mod_manager_gui(Tk):
         self.conflict_list = StringVar()
         self.conflict_mod_listbox = Listbox(self.conflict_mods_column, listvariable=self.conflict_list, exportselection=False)
         self.conflict_mods_label.pack(side="top", fill="x")
-        self.conflict_mod_listbox.pack(side="top", fill="x")
+        self.conflict_mod_listbox.pack(side="top", fill="both", expand=True)
 
         #buttons
         self.btn_chose_game_path = Button(self.btn_column, text="Choose game path", command=self.set_yumia_game_path)
@@ -81,16 +84,23 @@ class Yumia_mod_manager_gui(Tk):
         self.btn_reset_fdata_hash = Button(self.btn_column, text="Reset hash", command=self.reset_fdata_hash)
         self.btn_reset_fdata_hash.pack(side="top", fill="x")
 
+        #split btn
+        self.btn_split_mod = Button(self.btn_column, text="Split", command=self.split_mod_with_submods, state="disabled")
+        self.btn_split_mod.pack(side="top", fill="x")
+
         #yumia_path
         self.label_log = Label(self, text="Log")
 
         #stdout
         self.text_stdout = ScrolledText(self, state="disabled", height=5)
 
-        #outer frame pack
-        self.mods_column.pack(side="left", fill="both", expand=True)
-        self.conflict_mods_column.pack(side="left", fill="y")
-        self.btn_column.pack(side="left", fill="y")
+        #outer frame grid
+
+        self.row_interact.columnconfigure(0, weight=2)
+        self.row_interact.columnconfigure(1, weight=1)
+        self.mods_column.grid(column=0, row=0, sticky=(tk_grid_W, tk_grid_S, tk_grid_E, tk_grid_N))
+        self.conflict_mods_column.grid(column=1, row=0, sticky=(tk_grid_W, tk_grid_S, tk_grid_E, tk_grid_N))
+        self.btn_column.grid(column=2, row=0)
 
 
         self.row_interact.pack(side="top", fill="x")
@@ -222,6 +232,11 @@ class Yumia_mod_manager_gui(Tk):
                     break
 
         self.this_mod_name = tmp_real_modified_mod.replace("[enabled]", "")
+
+        if functions.check_has_sub_mod(self.this_mod_name)[0]:
+            self.btn_split_mod.config(state="normal")
+        else:
+            self.btn_split_mod.config(state="disabled")
 
 
         self.refresh_conflict_list(self.this_mod_name, self.submod_name)
@@ -364,6 +379,11 @@ class Yumia_mod_manager_gui(Tk):
         else:
             messagebox.showerror("Error", "Error hex code len.")
             print("Error hex code len")
+
+    def split_mod_with_submods(self):
+        functions.split_mods(self.this_mod_name)
+        self.refresh_mods_list()
+        self.on_click_mod(None)
 
 
 
