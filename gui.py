@@ -21,13 +21,15 @@ class Yumia_mod_manager_gui(Tk):
         self.config = None
         self.yumia_root_path = None
         self.is_ignore_md5_check = None
+        self.is_check_rdb_rdx_update = None
 
         self.this_mod_name = None
         self.submod_name = None #include prefix "0x"
 
-        #download tool state
-        self.is_download = False
-        self.is_download_finish = False
+        #init state
+        self.is_available_check = False #init start state
+        self.is_download_finish = False #download tool state
+        self.is_check_rdb_rdx_finish = False #new rdb rdx file check state
         
         
         self.row_interact = Frame(self)
@@ -98,7 +100,7 @@ class Yumia_mod_manager_gui(Tk):
         self.load_toml()
 
         self.after(1, self.after_gui_init)
-        self.after(10, self.yumia_mod_insert_into_rdb_tool_check)
+        self.after(10, self.yumia_mod_insert_available_check)
 
     def download_yumia_mod_insert_into_rdb_tool(self):
         while self.is_ignore_md5_check == None:
@@ -106,13 +108,25 @@ class Yumia_mod_manager_gui(Tk):
         functions.download_yumia_mod_insert_into_rdb_tool(self.is_ignore_md5_check)
         self.is_download_finish = True
 
-    def yumia_mod_insert_into_rdb_tool_check(self):
-        if not self.is_download:
+    def check_rdb_rdx_file_update(self):
+        while self.is_check_rdb_rdx_update == None:
+            pass
+        if self.is_check_rdb_rdx_update:
+            is_rdb_rdx_update = fdata_functions.check_rdb_rdx_reset("./mods", f"{self.yumia_root_path}/Motor")
+            functions.back_up_rdb_rdx(self.yumia_root_path, is_rdb_rdx_update)
+            if is_rdb_rdx_update:
+                functions.enable_mod(self.yumia_root_path, "")
+        self.is_check_rdb_rdx_finish = True
+
+    def yumia_mod_insert_available_check(self):
+        if not self.is_available_check:
             tmp_thread = threading.Thread(target=self.download_yumia_mod_insert_into_rdb_tool)
             tmp_thread.start()
-            self.is_download = True
-        if not self.is_download_finish:
-            self.after(100, self.yumia_mod_insert_into_rdb_tool_check)
+            tmp_thread = threading.Thread(target=self.check_rdb_rdx_file_update)
+            tmp_thread.start()
+            self.is_available_check = True
+        if (not self.is_download_finish) or (not self.is_check_rdb_rdx_finish):
+            self.after(100, self.yumia_mod_insert_available_check)
         else:
             self.btn_enable_or_disable.config(state="normal")
         
@@ -126,7 +140,7 @@ class Yumia_mod_manager_gui(Tk):
             messagebox.showinfo("info", "Please choose the game file first")
             self.set_yumia_game_path()
 
-        functions.back_up_rdb_rdx(self.yumia_root_path)
+        #functions.back_up_rdb_rdx(self.yumia_root_path, fdata_functions.check_rdb_rdx_reset("./mods", f"{self.yumia_root_path}/Motor"))
         self.show_game_path()
 
     def get_log_text(self) ->Text:
@@ -145,6 +159,7 @@ class Yumia_mod_manager_gui(Tk):
 
         self.yumia_root_path = self.config.get("yumia_root_path", None)
         self.is_ignore_md5_check = self.config.get("ignore_md5_check", False)
+        self.is_check_rdb_rdx_update = self.config.get("check_rdb_rdx_update", True)
 
     def dump_toml(self):
         with open("./config.toml", "w") as f:
@@ -281,7 +296,13 @@ class Yumia_mod_manager_gui(Tk):
             self.config.update(dict(yumia_root_path = self.yumia_root_path))
             self.dump_toml()
             self.show_game_path()
-            functions.back_up_rdb_rdx(self.yumia_root_path)
+
+            self.btn_enable_or_disable.config(state="disabled") #然而原本就是阻塞的，也许其实没用
+            is_rdb_rdx_update = fdata_functions.check_rdb_rdx_reset("./mods", f"{self.yumia_root_path}/Motor")
+            functions.back_up_rdb_rdx(self.yumia_root_path, is_rdb_rdx_update)
+            if is_rdb_rdx_update:
+                functions.enable_mod(self.yumia_root_path, "")
+            self.btn_enable_or_disable.config(state="normal")
 
     def open_folder(self):
         os.startfile(f"\"{os.getcwd()}/mods\"")

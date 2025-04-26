@@ -12,3 +12,4 @@
 *.json
 *.toml
 *.log
+/tmp_test

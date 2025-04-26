@@ -6,6 +6,7 @@ from shutil import copy
 import hashlib
 from subprocess import Popen as sub_Popen
 from subprocess import run as sub_run
+import time
 
 def cal_file_md5(file_path):
     md5_hash = hashlib.md5()
@@ -115,9 +116,20 @@ def call_yumia_mod_insert_into_rdb(yumia_path):
     
     sub_run(f"\"{yumia_path}/Motor/yumia_mod_insert_into_rdb.exe\"", shell=True)
 
-def back_up_rdb_rdx(yumia_path):
+def back_up_rdb_rdx(yumia_path, file_updated = False):
     if not os.path.exists("./backup"):
         os.mkdir("./backup")
+
+    if file_updated:
+        current_time = int(time.time())
+        if os.path.exists("./backup/root.rdb"):
+            os.rename("./backup/root.rdb", f"./backup/root.rdb.{current_time}")
+        if os.path.exists("./backup/root.rdx"):
+            os.rename("./backup/root.rdx", f"./backup/root.rdx.{current_time}")
+        if os.path.exists(f"{yumia_path}/Motor/root.rdb.original"):
+            os.remove(f"{yumia_path}/Motor/root.rdb.original")
+        if os.path.exists(f"{yumia_path}/Motor/root.rdx.original"):
+            os.remove(f"{yumia_path}/Motor/root.rdx.original")    
 
     #use orginal file from yumia_mod_insert_into_rdb.exe first for yumia_mod_insert_into_rdb.exe user
     if not os.path.exists("./backup/root.rdb"):
@@ -240,15 +252,17 @@ def enable_mod(yumia_path, target_mod_name):
     restore_rdb_rdx(yumia_path)
 
     enable_mods_list = get_enable_mods_list()
-    enable_mods_list.append(target_mod_name)
+    if target_mod_name != "":
+        enable_mods_list.append(target_mod_name)
 
     json_list = []
     for mod_name in enable_mods_list:
         json_list.extend(insert_mod_to_Motor(yumia_path, f"./mods/{mod_name}"))
 
     dump_rdb_rdx(yumia_path, json_list)
-    f = open(f"./mods/{target_mod_name}/.enable", "w")
-    f.close()
+    if target_mod_name != "":
+        f = open(f"./mods/{target_mod_name}/.enable", "w")
+        f.close()
 
 def disable_mod(yumia_path, target_mod_name):
     enable_mods_list = get_enable_mods_list()
